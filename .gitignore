@@ -1,0 +1,35 @@
+# === 忽略 Python 缓存文件 ===
+__pycache__/
+*.pyc
+*.pyo
+
+# === 忽略模型文件 ===
+*.pth
+checkpoints/
+
+# === 忽略输出图片（推理结果、可视化）===
+*.png
+*.jpg
+results/
+colorspace_figures/
+black_red_noise_figures_high/
+black_red_noise_figures_low/
+HSV_RGB_colorspace_high/
+HSV_RGB_colorspace_low/
+red_black_noise_figures/
+
+# === 忽略数据和中间数据文件 ===
+datasets/
+*.npz
+*.npy
+*.mat
+*.csv
+*.json
+
+# === VSCode、Jupyter等工具生成的文件 ===
+.vscode/
+*.ipynb_checkpoints/
+*.log
+
+# === 临时脚本、测试代码（根据个人需求添加） ===
+*_tmp.py
