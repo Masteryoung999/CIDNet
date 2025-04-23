@@ -35,26 +35,26 @@ if __name__ == '__main__':
     seed_everywhere(opt.seed)
 
     
-    train_transform = SequentialTransform(
-        [
-            lambda data: crop_rand(data, 400, 400),
-            lambda data: data_augment(data),
-            lambda data: [t.transpose(1,2,0) for t in data],
-            lambda data: to_tensor_transform(data),
-            # norm：mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]
-        ]
-    )
-    val_transform = SequentialTransform(
-        [
-            lambda data: to_tensor_transform(data)
-        ]
-    )
+    # train_transform = SequentialTransform(
+    #     [
+    #         lambda data: crop_rand(data, 400, 400),
+    #         lambda data: data_augment(data),
+    #         lambda data: [t.transpose(1,2,0) for t in data],
+    #         lambda data: to_tensor_transform(data),
+    #         # norm：mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]
+    #     ]
+    # )
+    # val_transform = SequentialTransform(
+    #     [
+    #         lambda data: to_tensor_transform(data)
+    #     ]
+    # )
     repeat = 1
     batch_size = 6
 
-    trainset = make_dataset_common(opt, train_transform, batch_size,
+    trainset = make_dataset_common(opt, batch_size,
                     repeat=repeat, shuffle=True, phase='train')
-    valset = make_dataset_common(opt, val_transform, 1,
+    valset = make_dataset_common(opt, 1,
                     repeat=1, shuffle=False, phase='val')
 
     opt.iterations = opt.epoch * len(trainset)

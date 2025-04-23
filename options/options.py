@@ -30,6 +30,7 @@ def train_options(parser):
     parser.add_argument('--wd', type=float, default=0, help='weight decay. default = 0')
     parser.add_argument('--loss', type=str, default='CIDLoss', choices=['l1','l2','smooth_l1','ssim','l2_ssim','nll', 'invnet', 'CIDLoss'],
                         help='loss')
+    parser.add_argument('--cropSize', type=int, default=400, help='image crop size (patch size)')
     parser.add_argument('--scheduler', type=str, default='cosine',choices=['cosine', 'reduce'],
                         help='which init scheduler to choose.')
     parser.add_argument('--epoch', type=int, default=1000, help='training epoches')
