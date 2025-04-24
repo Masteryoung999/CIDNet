@@ -26,7 +26,7 @@ def train_options(parser):
     parser.add_argument('--prefix', '-p', type = str, default='temp', help='prefix')
     parser.add_argument('--arch', '-a', metavar='ARCH', required=False, choices=model_names,
                         help = 'model architecture: ' + ' | '.join(model_names), default='none' )
-    parser.add_argument('--lr', type=float, default=1e-4, help='learning rate, default=1e-3')
+    parser.add_argument('--lr', type=float, default=3e-4, help='learning rate, default=1e-3')
     parser.add_argument('--wd', type=float, default=0, help='weight decay. default = 0')
     parser.add_argument('--loss', type=str, default='CIDLoss', choices=['l1','l2','smooth_l1','ssim','l2_ssim','nll', 'invnet', 'CIDLoss'],
                         help='loss')

@@ -191,13 +191,13 @@ class SSIM(torch.nn.Module):
 
 
 class CIDLoss(nn.Module):
-    def __init__(self, L1_weight, D_weight, E_weight, P_weight=0.01):
+    def __init__(self, L1_weight, D_weight, E_weight, P_weight):
         super(CIDLoss, self).__init__()
         self.P_weight = P_weight
         self.L1_loss= L1Loss(loss_weight=L1_weight, reduction='mean').cuda()
         self.D_loss = SSIM(weight=D_weight).cuda()
         self.E_loss = EdgeLoss(loss_weight=E_weight).cuda()
-        self.P_loss = PerceptualLoss({'conv1_2': 1, 'conv2_2': 1,'conv3_4': 1,'conv4_4': 1}, perceptual_weight = P_weight ,criterion='mse').cuda()
+        self.P_loss = PerceptualLoss({'conv1_2': 1, 'conv2_2': 1,'conv3_4': 1,'conv4_4': 1}, perceptual_weight = 1.0 ,criterion='mse').cuda()
 
     def forward(self, pred, target):
         loss = self.L1_loss(pred, target) + self.D_loss(pred, target) + self.E_loss(pred, target) + self.P_weight * self.P_loss(pred, target)[0]
