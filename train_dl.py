@@ -8,6 +8,7 @@ from utility import seed_everywhere, display_learning_rate, \
     make_dataset_common, load_datasets, SequentialTransform, \
     crop_rand, data_augment, to_tensor_transform
 from options.options import train_options
+from torchvision.transforms import Compose, RandomCrop, RandomHorizontalFlip, RandomVerticalFlip, ToTensor
 
 
 if __name__ == '__main__':
@@ -16,7 +17,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(
         description='LLIE')
     opt = train_options(parser)
-    opt.gpu_ids = [6]
+    opt.gpu_ids = [1]
     opt.arch = 'CIDNet'
     opt.dataname = 'LOLv1'
     
@@ -43,20 +44,32 @@ if __name__ == '__main__':
     #         # norm：mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]
     #     ]
     # )
+
     # val_transform = SequentialTransform(
     #     [
     #         lambda data: to_tensor_transform(data)
     #     ]
     # )
 
-    # repeat = 1
+    def train_transform(size=opt.cropSize):
+        return Compose([
+            RandomCrop((size, size)),
+            RandomHorizontalFlip(),
+            RandomVerticalFlip(),
+            ToTensor(),
+        ])
+
+    def val_transform():
+        return Compose([ToTensor()])
+
+    repeat = 1  # 重复的次数
  
-    # trainset = make_dataset_common(opt, train_transform, batch_size,
-    #                 repeat=repeat, shuffle=True, phase='train')
-    # valset = make_dataset_common(opt, val_transform, 1,
-    #                 repeat=1, shuffle=False, phase='val')
+    trainset = make_dataset_common(opt, train_transform(opt.cropSize), opt.batchSize,
+                    repeat=repeat, shuffle=True, phase='train')
+    valset = make_dataset_common(opt, val_transform(), 1,
+                    repeat=1, shuffle=False, phase='val')
     
-    trainset, valset = load_datasets()
+    # trainset, valset = load_datasets()
 
     opt.iterations = opt.epoch * len(trainset)
     print(f'total iterations: {opt.iterations}')

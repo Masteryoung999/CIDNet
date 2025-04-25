@@ -222,15 +222,16 @@ class Engine(object):
         output_hvi = self.net.HVIT(output_rgb)
         gt_hvi = self.net.HVIT(gt_rgb)
 
+        # CIDLoss
         loss_hvi = self.criterion(output_hvi, gt_hvi)
         loss_rgb = self.criterion(output_rgb, gt_rgb)
         loss = loss_rgb + self.opt.HVI_weight * loss_hvi
-        # loss = self.criterion(output_rgb, gt_rgb)
+        # loss = self.criterion(output_rgb, gt_rgb)  # L1Loss
 
         if isinstance(loss, tuple):
             loss_info = [t.item() for t in loss]
             loss = sum(loss)
-        # loss = loss + l2_regularization(self.net, self.opt.reg_l2) + l1_regularization(self.net, self.opt.reg_l1)
+        loss = loss + l2_regularization(self.net, self.opt.reg_l2) + l1_regularization(self.net, self.opt.reg_l1)
         
         
         time_end = time.time()

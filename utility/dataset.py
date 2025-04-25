@@ -88,30 +88,31 @@ class BaseDataset(data.Dataset):
  
  
 class PairedNPZDataset(BaseDataset):
+    def __init__(self, filepath, repeat=1, transform=None):
+        super(PairedNPZDataset, self).__init__(filepath, repeat)
+        self.filepath = filepath
+        self.transform = transform
+        self.norm = t.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])  # LOLv1 mean std
+
     def __getitem__(self, index):
         index = index % len(self.filepath)
         fp_in, fp_gt = self.filepath[index]
         img = load_img(fp_in)
         img_gt = load_img(fp_gt)
+        seed = random.randint(1, 1000000)
+        seed = np.random.randint(seed) # make a seed with numpy generator 
+        if self.transform:
+            random.seed(seed) # apply this seed to img tranfsorms
+            torch.manual_seed(seed) # needed for torchvision 0.7
+            img = self.transform(img)
+            random.seed(seed)
+            torch.manual_seed(seed)  
+            img_gt = self.transform(img_gt)    
         return img, img_gt
- 
-class ImageTransformDataset(torch.utils.data.Dataset):
-    def __init__(self, dataset, transform, target_transform=None):
-        super(ImageTransformDataset, self).__init__()
- 
-        self.dataset = dataset
-        self.transform = transform
-        self.target_transform = target_transform
-        self.length = len(self.dataset)
- 
+    
     def __len__(self):
         return self.length
- 
-    def __getitem__(self, idx):
-        inputs, targets = self.dataset[idx]
-        if self.transform is not None:
-            inputs, targets = self.transform((inputs, targets))
-        return inputs, targets
+
  
 def make_dataset_common(opt, transform, batch_size=None, repeat=1, phase='train', shuffle=True):
     if opt.dataname == 'LOLv1':
@@ -121,21 +122,19 @@ def make_dataset_common(opt, transform, batch_size=None, repeat=1, phase='train'
             input_files = sorted(get_all_files(input_root))
             gt_files = sorted(get_all_files(gt_root))
             file_paths = list(zip(input_files, gt_files))
-            dataset = PairedNPZDataset(file_paths, repeat=repeat)
+            dataset = PairedNPZDataset(file_paths, repeat=repeat, transform=transform)
         elif phase == 'val':
             input_root = '/data3/yyh/HVI_CIDNet_new/datasets/LOLdataset/eval15/low'
             gt_root = '/data3/yyh/HVI_CIDNet_new/datasets/LOLdataset/eval15/high'
             input_files = sorted(get_all_files(input_root))
             gt_files = sorted(get_all_files(gt_root))
             file_paths = list(zip(input_files, gt_files))
-            dataset = PairedNPZDataset(file_paths, repeat=1)
+            dataset = PairedNPZDataset(file_paths, repeat=1, transform=transform)
  
     else:
         raise 'no such dataset'
  
     """Split patches dataset into training, validation parts"""
-    # dataset = TransformDataset(dataset)
-    dataset = ImageTransformDataset(dataset, transform)
     if opt.world_size > 1 and phase == 'train':
         sampler = DistributedSampler(dataset, num_replicas=opt.world_size,
                                       rank=opt.rank, shuffle=shuffle)
@@ -225,8 +224,6 @@ class LOLDatasetFromFolder(data.Dataset):
             random.seed(seed) # apply this seed to img tranfsorms
             torch.manual_seed(seed) # needed for torchvision 0.7
             im1 = self.transform(im1)
-            # print(im1.shape)
-            # print(im1)
             random.seed(seed)
             torch.manual_seed(seed)         
             im2 = self.transform(im2) 
