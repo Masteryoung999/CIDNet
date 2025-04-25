@@ -114,7 +114,7 @@ class Engine(object):
         self.net = models.__dict__[self.opt.arch.lower()]()
 
         """Params Init"""
-        # init_params(self.net, init_type=self.opt.init, scale=self.opt.init_scale)
+        init_params(self.net, init_type=self.opt.init, scale=self.opt.init_scale)
 
         if cuda and len(self.opt.gpu_ids) > 1:
             torch.cuda.set_device(self.opt.gpu_ids[0])
@@ -219,17 +219,18 @@ class Engine(object):
         if isinstance(output_rgb, (tuple, list)):
                     output_rgb = output_rgb[0]
         gt_rgb = targets
-        output_hvi = self.net.HVIT(output_rgb)
-        gt_hvi = self.net.HVIT(gt_rgb)
+        # output_hvi = self.net.HVIT(output_rgb)
+        # gt_hvi = self.net.HVIT(gt_rgb)
 
-        loss_hvi = self.criterion(output_hvi, gt_hvi)
-        loss_rgb = self.criterion(output_rgb, gt_rgb)
-        loss = loss_rgb + self.opt.HVI_weight * loss_hvi
+        # loss_hvi = self.criterion(output_hvi, gt_hvi)
+        # loss_rgb = self.criterion(output_rgb, gt_rgb)
+        # loss = loss_rgb + self.opt.HVI_weight * loss_hvi
+        loss = self.criterion(output_rgb, gt_rgb)
 
         if isinstance(loss, tuple):
             loss_info = [t.item() for t in loss]
             loss = sum(loss)
-        loss = loss + l2_regularization(self.net, self.opt.reg_l2) + l1_regularization(self.net, self.opt.reg_l1)
+        # loss = loss + l2_regularization(self.net, self.opt.reg_l2) + l1_regularization(self.net, self.opt.reg_l1)
         
         
         time_end = time.time()

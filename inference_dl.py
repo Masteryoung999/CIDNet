@@ -16,7 +16,7 @@ if __name__ == '__main__':
     opt.no_log = True
     opt.no_ropt = True
 
-    opt.gpu_ids = [0]
+    opt.gpu_ids = [7]
     opt.arch = 'CIDNet'
     opt.resume = True
     opt.resumePath = '/data3/yyh/HVI_CIDNet_new/checkpoints/CIDNet/LOLv1/model_best.pth'

@@ -16,12 +16,12 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(
         description='LLIE')
     opt = train_options(parser)
-    opt.gpu_ids = [7]
+    opt.gpu_ids = [5]
     opt.arch = 'CIDNet'
 
     opt.dataname = 'LOLv1'
     
-    opt.loss = 'CIDLoss'
+    opt.loss = 'L1Loss'
     # opt.prefix = f'{opt.dataname}'
     opt.prefix = f'{opt.dataname}_{opt.loss}'
 
