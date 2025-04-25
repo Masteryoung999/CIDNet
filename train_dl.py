@@ -5,7 +5,7 @@ import os
 import torch
 from setup_dl import Engine
 from utility import seed_everywhere, display_learning_rate, \
-    make_dataset_common, SequentialTransform, \
+    make_dataset_common, load_datasets, SequentialTransform, \
     crop_rand, data_augment, to_tensor_transform
 from options.options import train_options
 
@@ -16,12 +16,11 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(
         description='LLIE')
     opt = train_options(parser)
-    opt.gpu_ids = [5]
+    opt.gpu_ids = [6]
     opt.arch = 'CIDNet'
-
     opt.dataname = 'LOLv1'
     
-    opt.loss = 'L1Loss'
+    opt.loss = 'CIDLoss'
     # opt.prefix = f'{opt.dataname}'
     opt.prefix = f'{opt.dataname}_{opt.loss}'
 
@@ -35,28 +34,29 @@ if __name__ == '__main__':
     seed_everywhere(opt.seed)
 
     
-    train_transform = SequentialTransform(
-        [
-            lambda data: crop_rand(data, 400, 400),
-            lambda data: data_augment(data),
-            lambda data: [t.transpose(1,2,0) for t in data],
-            lambda data: to_tensor_transform(data),
-            # norm：mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]
-        ]
-    )
-    val_transform = SequentialTransform(
-        [
-            lambda data: to_tensor_transform(data)
-        ]
-    )
+    # train_transform = SequentialTransform(
+    #     [
+    #         lambda data: crop_rand(data, 400, 400),
+    #         lambda data: data_augment(data),
+    #         lambda data: [t.transpose(1,2,0) for t in data],
+    #         lambda data: to_tensor_transform(data),
+    #         # norm：mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]
+    #     ]
+    # )
+    # val_transform = SequentialTransform(
+    #     [
+    #         lambda data: to_tensor_transform(data)
+    #     ]
+    # )
 
-    repeat = 1
-    batch_size = 6
+    # repeat = 1
  
-    trainset = make_dataset_common(opt, train_transform, batch_size,
-                    repeat=repeat, shuffle=True, phase='train')
-    valset = make_dataset_common(opt, val_transform, 1,
-                    repeat=1, shuffle=False, phase='val')
+    # trainset = make_dataset_common(opt, train_transform, batch_size,
+    #                 repeat=repeat, shuffle=True, phase='train')
+    # valset = make_dataset_common(opt, val_transform, 1,
+    #                 repeat=1, shuffle=False, phase='val')
+    
+    trainset, valset = load_datasets()
 
     opt.iterations = opt.epoch * len(trainset)
     print(f'total iterations: {opt.iterations}')

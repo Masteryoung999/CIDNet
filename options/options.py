@@ -27,9 +27,11 @@ def train_options(parser):
     parser.add_argument('--arch', '-a', metavar='ARCH', required=False, choices=model_names,
                         help = 'model architecture: ' + ' | '.join(model_names), default='none' )
     parser.add_argument('--lr', type=float, default=3e-4, help='learning rate, default=1e-3')
+    parser.add_argument('--batchSize', type=int, default=6, help='batch size for training')
     parser.add_argument('--wd', type=float, default=0, help='weight decay. default = 0')
     parser.add_argument('--loss', type=str, default='CIDLoss', choices=['l1','l2','smooth_l1','ssim','l2_ssim','nll', 'invnet', 'CIDLoss'],
                         help='loss')
+    parser.add_argument('--shuffle', type=bool, default=True)
     parser.add_argument('--cropSize', type=int, default=400, help='image crop size (patch size)')
     parser.add_argument('--scheduler', type=str, default='cosine',choices=['cosine', 'reduce'],
                         help='which init scheduler to choose.')
@@ -77,7 +79,7 @@ def train_options(parser):
 
     # validation input
     parser.add_argument('--data_val_lol_blur'       , type=str, default='./datasets/LOL_blur/eval/low_blur')
-    parser.add_argument('--data_val_lol_v1'         , type=str, default='./datasets/LOLdataset/eval15/low')
+    parser.add_argument('--data_val_lol_v1'         , type=str, default='./datasets/LOLdataset/eval15')
     parser.add_argument('--data_val_lolv2_real'     , type=str, default='./datasets/LOLv2/Real_captured/Test/Low')
     parser.add_argument('--data_val_lolv2_syn'      , type=str, default='./datasets/LOLv2/Synthetic/Test/Low')
     parser.add_argument('--data_val_SID'            , type=str, default='./datasets/Sony_total_dark/eval/short')

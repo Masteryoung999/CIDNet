@@ -6,6 +6,7 @@ import random
 import os
 from contextlib import contextmanager
 
+
 @contextmanager
 def fixed_seed(seed):
     # 保存原始状态
