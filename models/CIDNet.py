@@ -1,6 +1,7 @@
 import torch
 import torch.nn as nn
 from models.HVI_transform import RGB_HVI
+from models.learnable_colospace import InvertibleColorTransform
 from models.transformer_utils import *
 from models.LCA import *
 from huggingface_hub import PyTorchModelHubMixin
@@ -66,11 +67,11 @@ class CIDNet(nn.Module, PyTorchModelHubMixin):
         self.I_LCA5 = I_LCA(ch3, head3)
         self.I_LCA6 = I_LCA(ch2, head2)
         
-        self.trans = RGB_HVI()
+        self.trans = InvertibleColorTransform()
         
     def forward(self, x):
         dtypes = x.dtype
-        hvi = self.trans.HVIT(x)
+        hvi = self.trans(x)
         i = hvi[:,2,:,:].unsqueeze(1).to(dtypes)
         # low
         i_enc0 = self.IE_block0(i)
@@ -117,12 +118,12 @@ class CIDNet(nn.Module, PyTorchModelHubMixin):
         hv_0 = self.HVD_block0(hv_1)
         
         output_hvi = torch.cat([hv_0, i_dec0], dim=1) + hvi
-        output_rgb = self.trans.PHVIT(output_hvi)
+        output_rgb = self.trans.inverse(output_hvi)
 
         return output_rgb
     
     def HVIT(self,x):
-        hvi = self.trans.HVIT(x)
+        hvi = self.trans(x)
         return hvi
     
     
