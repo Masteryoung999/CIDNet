@@ -5,8 +5,8 @@ import os
 import torch
 from setup_dl import Engine
 from utility import seed_everywhere, display_learning_rate, \
-    make_dataset_common, load_datasets, SequentialTransform, \
-    crop_rand, data_augment, to_tensor_transform
+    make_dataset_common
+
 from options.options import train_options
 from torchvision.transforms import Compose, RandomCrop, RandomHorizontalFlip, RandomVerticalFlip, ToTensor
 
@@ -17,39 +17,22 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(
         description='LLIE')
     opt = train_options(parser)
-    opt.gpu_ids = [1]
+    opt.gpu_ids = [6]
     opt.arch = 'CIDNet'
     opt.dataname = 'LOLv1'
     
-    opt.loss = 'CIDLoss'
+    opt.loss = 'l1'
     # opt.prefix = f'{opt.dataname}'
     opt.prefix = f'{opt.dataname}_{opt.loss}'
-
+    # resume从上次的模型model_latest.pth继续训练
     # opt.resume = True
-    # opt.resumePath = f'checkpoints/mffssr_large/NTIRE_rbsformer/model_latest.pth'
+    # opt.resumePath = f'/data3/yyh/HVI_CIDNet_new/checkpoints/CIDNet/LOLv1_l1/model_latest.pth'
     # opt.clear = True
     # opt.no_ropt = True
     print(opt)
 
     """Set Random Status"""
     seed_everywhere(opt.seed)
-
-    
-    # train_transform = SequentialTransform(
-    #     [
-    #         lambda data: crop_rand(data, 400, 400),
-    #         lambda data: data_augment(data),
-    #         lambda data: [t.transpose(1,2,0) for t in data],
-    #         lambda data: to_tensor_transform(data),
-    #         # norm：mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]
-    #     ]
-    # )
-
-    # val_transform = SequentialTransform(
-    #     [
-    #         lambda data: to_tensor_transform(data)
-    #     ]
-    # )
 
     def train_transform(size=opt.cropSize):
         return Compose([
@@ -70,7 +53,7 @@ if __name__ == '__main__':
                     repeat=1, shuffle=False, phase='val')
     
     # trainset, valset = load_datasets()
-
+    print(len(trainset))
     opt.iterations = opt.epoch * len(trainset)
     print(f'total iterations: {opt.iterations}')
     engine = Engine(opt)

@@ -219,14 +219,14 @@ class Engine(object):
         if isinstance(output_rgb, (tuple, list)):
                     output_rgb = output_rgb[0]
         gt_rgb = targets
-        output_hvi = self.net.HVIT(output_rgb)
-        gt_hvi = self.net.HVIT(gt_rgb)
 
         # CIDLoss
-        loss_hvi = self.criterion(output_hvi, gt_hvi)
-        loss_rgb = self.criterion(output_rgb, gt_rgb)
-        loss = loss_rgb + self.opt.HVI_weight * loss_hvi
-        # loss = self.criterion(output_rgb, gt_rgb)  # L1Loss
+        # output_hvi = self.net.HVIT(output_rgb)
+        # gt_hvi = self.net.HVIT(gt_rgb)
+        # loss_hvi = self.criterion(output_hvi, gt_hvi)
+        # loss_rgb = self.criterion(output_rgb, gt_rgb)
+        # loss = loss_rgb + self.opt.HVI_weight * loss_hvi
+        loss = self.criterion(output_rgb, gt_rgb)  # L1Loss
 
         if isinstance(loss, tuple):
             loss_info = [t.item() for t in loss]

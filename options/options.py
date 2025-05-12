@@ -26,16 +26,16 @@ def train_options(parser):
     parser.add_argument('--prefix', '-p', type = str, default='temp', help='prefix')
     parser.add_argument('--arch', '-a', metavar='ARCH', required=False, choices=model_names,
                         help = 'model architecture: ' + ' | '.join(model_names), default='none' )
-    parser.add_argument('--lr', type=float, default=3e-4, help='learning rate, default=1e-3')
-    parser.add_argument('--batchSize', type=int, default=1, help='batch size for training')
+    parser.add_argument('--lr', type=float, default=1e-4, help='learning rate, default=1e-3')
+    parser.add_argument('--batchSize', type=int, default=24, help='batch size for training')
     parser.add_argument('--wd', type=float, default=0, help='weight decay. default = 0')
     parser.add_argument('--loss', type=str, default='CIDLoss', choices=['l1','l2','smooth_l1','ssim','l2_ssim','nll', 'invnet', 'CIDLoss'],
                         help='loss')
     parser.add_argument('--shuffle', type=bool, default=True)
-    parser.add_argument('--cropSize', type=int, default=400, help='image crop size (patch size)')
+    parser.add_argument('--cropSize', type=int, default=256, help='image crop size (patch size)')
     parser.add_argument('--scheduler', type=str, default='cosine',choices=['cosine', 'reduce'],
                         help='which init scheduler to choose.')
-    parser.add_argument('--epoch', type=int, default=1000, help='training epoches')
+    parser.add_argument('--epoch', type=int, default=4000, help='training epoches')
     parser.add_argument('--iterations', type=int, default=1, help='training iterations')
     parser.add_argument('--init', type=str, default='kn',choices=['kn', 'ku', 'xn', 'xu', 'edsr'],
                         help='which init scheme to choose.')
