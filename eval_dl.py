@@ -1,80 +1,115 @@
 import os
+import torch
+import glob
+import cv2
+import lpips
 import numpy as np
-from skimage.metrics import peak_signal_noise_ratio, structural_similarity
+from PIL import Image
 from tqdm import tqdm
-import matplotlib.pyplot as plt
+import argparse
 
-def rsshow(I, scale=0.005):
-    low, high = np.quantile(I, [scale, 1 - scale])
-    I[I > high] = high
-    I[I < low] = low
-    I = (I - low) / (high - low)
-    return I
+mea_parser = argparse.ArgumentParser(description='Measure')
+mea_parser.add_argument('--use_GT_mean', action='store_true', help='Use the mean of GT to rectify the output of the model')
+mea_parser.add_argument('--lol', action='store_true', help='measure lolv1 dataset')
+mea_parser.add_argument('--lol_v2_real', action='store_true', help='measure lol_v2_real dataset')
+mea_parser.add_argument('--lol_v2_syn', action='store_true', help='measure lol_v2_syn dataset')
+mea_parser.add_argument('--SICE_grad', action='store_true', help='measure SICE_grad dataset')
+mea_parser.add_argument('--SICE_mix', action='store_true', help='measure SICE_mix dataset')
+mea = mea_parser.parse_args()
 
-def calculate_raw_metrics(pred, gt, data_range=None):
-    """
-    计算4通道RAW图像的PSNR和SSIM指标
+def ssim(prediction, target):
+    C1 = (0.01 * 255)**2
+    C2 = (0.03 * 255)**2
+    img1 = prediction.astype(np.float64)
+    img2 = target.astype(np.float64)
+    kernel = cv2.getGaussianKernel(11, 1.5)
+    window = np.outer(kernel, kernel.transpose())
+    mu1 = cv2.filter2D(img1, -1, window)[5:-5, 5:-5] 
+    mu2 = cv2.filter2D(img2, -1, window)[5:-5, 5:-5]
+    mu1_sq = mu1**2
+    mu2_sq = mu2**2
+    mu1_mu2 = mu1 * mu2
+    sigma1_sq = cv2.filter2D(img1**2, -1, window)[5:-5, 5:-5] - mu1_sq
+    sigma2_sq = cv2.filter2D(img2**2, -1, window)[5:-5, 5:-5] - mu2_sq
+    sigma12 = cv2.filter2D(img1 * img2, -1, window)[5:-5, 5:-5] - mu1_mu2
+    ssim_map = ((2 * mu1_mu2 + C1) *
+                (2 * sigma12 + C2)) / ((mu1_sq + mu2_sq + C1) *
+                                       (sigma1_sq + sigma2_sq + C2))
+    return ssim_map.mean()
 
-    参数:
-        pred (numpy.ndarray): 预测图像数组[H,W,4]
-        gt (numpy.ndarray): 真实图像数组[H,W,4]
-        data_range (float, optional): 像素值范围，默认自动判断
+def calculate_ssim(target, ref):
+    img1 = np.array(target, dtype=np.float64)
+    img2 = np.array(ref, dtype=np.float64)
+    if not img1.shape == img2.shape:
+        raise ValueError('Input images must have the same dimensions.')
+    if img1.ndim == 2:
+        return ssim(img1, img2)
+    elif img1.ndim == 3:
+        if img1.shape[2] == 3:
+            return np.mean([ssim(img1[:, :, i], img2[:, :, i]) for i in range(3)])
+        elif img1.shape[2] == 1:
+            return ssim(np.squeeze(img1), np.squeeze(img2))
+    else:
+        raise ValueError('Wrong input image dimensions.')
 
-    返回:
-        tuple: (PSNR值, SSIM值)
+def calculate_psnr(target, ref):
+    img1 = np.array(target, dtype=np.float32)
+    img2 = np.array(ref, dtype=np.float32)
+    diff = img1 - img2
+    psnr = 10.0 * np.log10(255.0 * 255.0 / (np.mean(np.square(diff)) + 1e-8))
+    return psnr
 
-    异常:
-        ValueError: 输入形状不匹配或非四通道
-    """
-    # 形状一致性验证
-    if pred.shape != gt.shape:
-        raise ValueError(f"形状不匹配: pred {pred.shape} vs gt {gt.shape}")
+def metrics(im_dir, label_dir, use_GT_mean):
+    avg_psnr = 0
+    avg_ssim = 0
+    avg_lpips = 0
+    n = 0
+    loss_fn = lpips.LPIPS(net='alex')
+    loss_fn.cuda()
 
-    # 通道数验证
-    if pred.ndim != 3 or pred.shape[2] != 4:
-        raise ValueError("输入必须是四通道图像 (HxWx4)")
+    im_list = sorted(glob.glob(im_dir))
+    label_list = sorted(glob.glob(label_dir))
 
-    # 数据范围自动判断
-    if data_range is None:
-        if np.issubdtype(pred.dtype, np.integer):
-            data_range = np.iinfo(pred.dtype).max
-        else:
-            data_range = 1.0  # 归一化数据假设
+    assert len(im_list) == len(label_list), "预测图像和GT图像数量不一致！"
 
-    # 转换为浮点型避免计算溢出
-    pred = pred.astype(np.float64)
-    gt = gt.astype(np.float64)
+    for pred_path, gt_path in tqdm(zip(im_list, label_list), total=len(im_list)):
+        n += 1
+        im1 = Image.open(pred_path).convert('RGB')
+        im2 = Image.open(gt_path).convert('RGB')
 
-    # 计算PSNR（自动处理多通道）
-    psnr = peak_signal_noise_ratio(gt, pred, data_range=data_range)
+        (h, w) = im2.size
+        im1 = im1.resize((h, w))  
+        im1 = np.array(im1) 
+        im2 = np.array(im2)
 
-    # 计算SSIM（指定通道轴）
-    ssim = structural_similarity(gt, pred,
-                                 win_size=7,
-                                 channel_axis=-1,  # 最后一个维度是通道
-                                 data_range=data_range)
+        if use_GT_mean:
+            mean_restored = cv2.cvtColor(im1, cv2.COLOR_RGB2GRAY).mean()
+            mean_target = cv2.cvtColor(im2, cv2.COLOR_RGB2GRAY).mean()
+            im1 = np.clip(im1 * (mean_target / mean_restored), 0, 255)
 
-    return float(psnr), float(ssim)
+        score_psnr = calculate_psnr(im1, im2)
+        score_ssim = calculate_ssim(im1, im2)
 
-gt_root = '/data2/yyh/NTIRE_RAWSR2024/val_gt/'
-output_root = '/data3/yyh/distillation_v2/results/mffssr_small'
+        ex_p0 = lpips.im2tensor(im1).cuda()
+        ex_ref = lpips.im2tensor(im2).cuda()
+        score_lpips = loss_fn.forward(ex_ref, ex_p0)
 
-psnr_list, ssim_list = [], []
-for ind in tqdm(range(40)):
-    gt = np.load(os.path.join(gt_root, f'{ind + 1}.npz'))
-    raw_img_gt = gt["raw"].astype(np.float32)
-    raw_max_gt = gt["max_val"]
-    raw_img_gt = raw_img_gt / raw_max_gt
+        avg_psnr += score_psnr
+        avg_ssim += score_ssim
+        avg_lpips += score_lpips.item()
+        torch.cuda.empty_cache()
 
-    output = np.load(os.path.join(output_root, f'{ind + 1}.npz'))
-    raw_img_output = output["raw"].astype(np.float32)
-    raw_max_output = output["max_val"]
-    raw_img_output = raw_img_output / raw_max_output
-    raw_img_output = np.clip(raw_img_output, 0, 1)
+    avg_psnr /= n
+    avg_ssim /= n
+    avg_lpips /= n
+    return avg_psnr, avg_ssim, avg_lpips
 
 
-    psnr, ssim = calculate_raw_metrics(raw_img_output, raw_img_gt, data_range=1)
-    psnr_list.append(psnr)
-    ssim_list.append(ssim)
-print(psnr_list)
-print(np.mean(psnr_list), np.mean(ssim_list))
+if __name__ == '__main__':
+    im_dir = "/data3/yyh/HVI_CIDNet_new/results/CIDNet/*.png"
+    label_dir = "/data3/yyh/HVI_CIDNet_new/datasets/LOLdataset/eval15/high/*.png"
+
+    avg_psnr, avg_ssim, avg_lpips = metrics(im_dir, label_dir, True)
+    print("===> Avg.PSNR: {:.4f} dB ".format(avg_psnr))
+    print("===> Avg.SSIM: {:.4f} ".format(avg_ssim))
+    print("===> Avg.LPIPS: {:.4f} ".format(avg_lpips))

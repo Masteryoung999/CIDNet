@@ -59,12 +59,8 @@ def l2_regularization(model, l2_alpha):
 def init_criterion(loss):
     if loss == 'l2':
         criterion = nn.MSELoss()
-    elif loss == 'l1':
-        criterion = nn.L1Loss()
-    elif loss == 'CIDLoss':
-        criterion = CIDLoss(L1_weight=0, D_weight=0, E_weight=0, P_weight=0.01)
     else:
-        criterion = nn.MSELoss()
+        criterion = nn.L1Loss()
     return criterion
 
 def get_summary_writer(log_dir, prefix=None):
@@ -126,9 +122,12 @@ class Engine(object):
             torch.cuda.set_device(self.opt.gpu_ids[0])
             self.net.to(self.device)
         """Loss Function"""
-        self.criterion = init_criterion(self.opt.loss)
-        # self.L1_loss, self.D_loss, self.E_loss, self.P_loss = init_criterion(
-        #     self.opt.L1_weight, self.opt.D_weight, self.opt.E_weight, self.opt.P_weight)
+        if self.opt.loss == 'CIDLoss':
+            self.criterion = CIDLoss(self.opt.L1_weight, self.opt.D_weight, self.opt.E_weight, self.opt.P_weight)
+        elif self.opt.loss == 'rbsformer':
+            self.criterion = RBSFormerLoss()
+        else:  # default L1Loss
+            self.criterion = init_criterion(self.opt.loss)
         if cuda:
             self.criterion = self.criterion.to(self.device)
         print('criterion: ', self.criterion)
@@ -220,13 +219,25 @@ class Engine(object):
                     output_rgb = output_rgb[0]
         gt_rgb = targets
 
+        output_hvi = self.net.HVIT(output_rgb)
+        gt_hvi = self.net.HVIT(gt_rgb)
+
         # CIDLoss
-        # output_hvi = self.net.HVIT(output_rgb)
-        # gt_hvi = self.net.HVIT(gt_rgb)
-        # loss_hvi = self.criterion(output_hvi, gt_hvi)
-        # loss_rgb = self.criterion(output_rgb, gt_rgb)
-        # loss = loss_rgb + self.opt.HVI_weight * loss_hvi
-        loss = self.criterion(output_rgb, gt_rgb)  # L1Loss
+        if self.opt.loss == 'CIDLoss':
+            loss_hvi = self.criterion(output_hvi, gt_hvi)
+            loss_rgb = self.criterion(output_rgb, gt_rgb)
+            loss = loss_rgb + self.opt.HVI_weight * loss_hvi
+        if self.opt.loss == 'l1':
+            loss = self.criterion(output_rgb, gt_rgb)  # L1Loss
+
+        if self.opt.loss == 'rbsformer':
+            # loss_hvi = self.criterion(output_hvi, gt_hvi)
+            # loss_rgb = self.criterion(output_rgb, gt_rgb)
+            # loss = loss_rgb + self.opt.HVI_weight * loss_hvi
+            loss = self.criterion(output_rgb, gt_rgb)
+
+        if self.opt.loss == 'comLoss':
+            loss = self.criterion(output_rgb, gt_rgb)
 
         if isinstance(loss, tuple):
             loss_info = [t.item() for t in loss]

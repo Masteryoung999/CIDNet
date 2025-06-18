@@ -19,40 +19,44 @@ if __name__ == '__main__':
     opt.gpu_ids = [4]
     opt.arch = 'CIDNet'
     opt.resume = True
-    opt.resumePath = '/data3/yyh/HVI_CIDNet_new/checkpoints/CIDNet/LOLv1_l1_w128_b4/psnr27.0312.pth'
+    opt.resumePath = '/data3/yyh/HVI_CIDNet_new/checkpoints/CIDNet/LOLv1_rbsformer_frozen_cidloss_6_16_agentattention/model_best.pth'
     opt.loss = 'CIDLoss'
 
-    print(opt)
+    checkpoint = torch.load(opt.resumePath, map_location='cpu')
+    best_psnr = checkpoint.get('best_psnr')
+    print(f"Best PSNR: {best_psnr}")
 
-    """Set Random Status"""
-    seed_everywhere(opt.seed)
+    # print(opt)
 
-    """Setup Engine"""
-    engine = Engine(opt)
-    print('model params: %.2fM' % (sum([t.nelement() for t in engine.net.parameters()]) / 10 ** 6))
+    # """Set Random Status"""
+    # seed_everywhere(opt.seed)
 
-    """Inference"""
-    save_dir = os.path.join('results', opt.arch)
-    os.makedirs(save_dir, exist_ok=True)
+    # """Setup Engine"""
+    # engine = Engine(opt)
+    # print('model params: %.2fM' % (sum([t.nelement() for t in engine.net.parameters()]) / 10 ** 6))
 
-    input_images = sorted(glob("/data3/yyh/HVI_CIDNet_new/datasets/LOLdataset/eval15/low/*.png"))
-    for img_path in input_images:
-        # 加载图像并转换为 tensor
-        img = load_img(img_path)
-        img_tensor = TF.to_tensor(img).unsqueeze(0).to(engine.device)  # [1, C, H, W]
+    # """Inference"""
+    # save_dir = os.path.join('results', opt.arch)
+    # os.makedirs(save_dir, exist_ok=True)
 
-        with torch.no_grad():
-            output = engine.net(img_tensor)
-            # print(output.shape)
+    # input_images = sorted(glob("/data3/yyh/HVI_CIDNet_new/datasets/LOLdataset/eval15/low/*.png"))
+    # for img_path in input_images:
+    #     # 加载图像并转换为 tensor
+    #     img = load_img(img_path)
+    #     img_tensor = TF.to_tensor(img).unsqueeze(0).to(engine.device)  # [1, C, H, W]
+
+    #     with torch.no_grad():
+    #         output = engine.net(img_tensor)
+    #         # print(output.shape)
         
-        # 如果模型输出是 list 或 tuple，取第一个
-        if isinstance(output, (list, tuple)):
-            output = output[0]
-        output = output.squeeze(0).cpu().clamp(0, 1)  # [C, H, W]
+    #     # 如果模型输出是 list 或 tuple，取第一个
+    #     if isinstance(output, (list, tuple)):
+    #         output = output[0]
+    #     output = output.squeeze(0).cpu().clamp(0, 1)  # [C, H, W]
 
-        # 保存图像
-        output_img_path = os.path.join(save_dir, os.path.basename(img_path))
-        img = TF.to_pil_image(output)
-        img.save(output_img_path)
+    #     # 保存图像
+    #     output_img_path = os.path.join(save_dir, os.path.basename(img_path))
+    #     img = TF.to_pil_image(output)
+    #     img.save(output_img_path)
 
-    print(f"Inference complete. Results saved to: {save_dir}")
+    # print(f"Inference complete. Results saved to: {save_dir}")

@@ -68,10 +68,20 @@ class CIDNet(nn.Module, PyTorchModelHubMixin):
         self.I_LCA6 = I_LCA(ch2, head2)
         
         self.trans = InvertibleColorTransform()
-        
+        ckpt_path = "/data3/yyh/HVI_CIDNet_new/checkpoints/LOLv1_colorspace/model_best.pth"
+        state_dict = torch.load(ckpt_path, map_location="cpu")
+        self.trans.load_state_dict(state_dict)
+        # self.trans.eval()
+
+        # 冻结参数
+        for param in self.trans.parameters():
+            param.requires_grad = False
+
+        # self.trans = RGB_HVI()
     def forward(self, x):
         dtypes = x.dtype
         hvi = self.trans(x)
+        # hvi = self.trans.HVIT(x)
         i = hvi[:,2,:,:].unsqueeze(1).to(dtypes)
         # low
         i_enc0 = self.IE_block0(i)
@@ -119,11 +129,13 @@ class CIDNet(nn.Module, PyTorchModelHubMixin):
         
         output_hvi = torch.cat([hv_0, i_dec0], dim=1) + hvi
         output_rgb = self.trans.inverse(output_hvi)
+        # output_rgb = self.trans.PHVIT(output_hvi)
 
         return output_rgb
     
     def HVIT(self,x):
         hvi = self.trans(x)
+        # hvi = self.trans.HVIT(x)
         return hvi
     
     

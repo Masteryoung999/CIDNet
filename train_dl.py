@@ -17,18 +17,18 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(
         description='LLIE')
     opt = train_options(parser)
-    opt.gpu_ids = [2]
+    opt.gpu_ids = [0]
     opt.arch = 'CIDNet'
     opt.dataname = 'LOLv1'
     
-    opt.loss = 'l1'
+    opt.loss = 'comLoss'
     # opt.prefix = f'{opt.dataname}'
-    opt.prefix = f'{opt.dataname}_{opt.loss}_w128_b4'
+    opt.prefix = f'{opt.dataname}_{opt.loss}_frozen_comloss_6_18'
     # resume从上次的模型model_latest.pth继续训练
-    opt.resume = True
-    opt.resumePath = '/data3/yyh/HVI_CIDNet_new/checkpoints/CIDNet/LOLv1_l1_w128_b4/model_best.pth'
-    opt.clear = True
-    opt.no_ropt = True
+    # opt.resume = True
+    # opt.resumePath = '/data3/yyh/HVI_CIDNet_new/checkpoints/CIDNet/LOLv1_CIDLoss_frozen_cidloss/model_latest.pth'
+    # opt.clear = True
+    # opt.no_ropt = True
     print(opt)
 
     """Set Random Status"""

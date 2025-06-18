@@ -14,42 +14,7 @@ class DepthwiseSeparableConv(nn.Module):
     def forward(self, x):
         return self.pointwise(self.depthwise(x))
 
-# class AffineCoupling(nn.Module):
-#     """
-#     仿射耦合层: B_out = B * exp(s(A)) + t(A)
-#     修改为固定使用前两个通道作为A部分
-#     """
-#     def __init__(self, num_channels):
-#         super().__init__()
-#         # 固定A部分为2个通道
-#         self.A_channels = 2
-#         # B部分为1个通道
-#         self.B_channels = 1
-        
-#         self.net = nn.Sequential(
-#             DepthwiseSeparableConv(self.A_channels, 64),
-#             nn.ReLU(),
-#             DepthwiseSeparableConv(64, 64),
-#             nn.ReLU(),
-#             DepthwiseSeparableConv(64, self.B_channels * 2),
-#         )
 
-#     def forward(self, x, reverse=False):
-#         # 固定前两个通道为A部分
-#         A, B = x[:, :self.A_channels], x[:, self.A_channels:]
-        
-#         # 生成用于B部分的变换参数
-#         st = self.net(A)
-#         s, t = st[:, :self.B_channels], st[:, self.B_channels:]
-#         s = torch.tanh(s)
-        
-#         if not reverse:
-#             B_out = B * torch.exp(s) + t
-#             out = torch.cat([A, B_out], dim=1)
-#         else:
-#             B_rec = (B - t) * torch.exp(-s)
-#             out = torch.cat([A, B_rec], dim=1)
-#         return out
 class AffineCoupling(nn.Module):
     """
     仿射耦合层: B_out = B * exp(s(A)) + t(A)
@@ -212,6 +177,13 @@ class InvertibleColorTransform(nn.Module):
 
 if __name__ == "__main__":
     net = InvertibleColorTransform()
+
+    ckpt_path = "/data3/yyh/HVI_CIDNet_new/checkpoints/LOLv1_colorspace/model_best.pth"
+    state_dict = torch.load(ckpt_path, map_location="cpu")
+    net.load_state_dict(state_dict)
+
+    net.eval()
+
     img = torch.randn(2, 3, 128, 128)
     z = net(img)
     rec = net.inverse(z)

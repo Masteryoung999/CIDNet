@@ -3,6 +3,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 from utility.vgg_arch import VGGFeatureExtractor, Registry
 from utility.loss_utils import *
+import torch.fft as fft
 
 
 _reduction_modes = ['none', 'mean', 'sum']
@@ -201,4 +202,77 @@ class CIDLoss(nn.Module):
 
     def forward(self, pred, target):
         loss = self.L1_loss(pred, target) + self.D_loss(pred, target) + self.E_loss(pred, target) + self.P_weight * self.P_loss(pred, target)[0]
+        return loss
+
+    
+class RBSFormerLoss(nn.Module):
+    """
+    RBSFormer的复合损失函数
+    包含Charbonnier损失和频率域L1损失
+    """
+
+    def __init__(self, eps=1e-3, lambda_freq=0.5):
+        """
+        Args:
+            eps (float): Charbonnier损失的平滑系数
+            lambda_freq (float): 频率损失的权重系数
+        """
+        super().__init__()
+        self.eps = eps
+        self.lambda_freq = lambda_freq
+
+    def forward(self, pred, target):
+        """
+        Args:
+            pred (Tensor): 网络输出 [B, C, H, W]
+            target (Tensor): 目标图像 [B, C, H, W]
+        Returns:
+            loss (Tensor): 综合损失值
+        """
+        # 空间域Charbonnier损失
+        char_loss = self.charbonnier_loss(pred, target)
+
+        # 频率域L1损失
+        freq_loss = self.frequency_loss(pred, target)
+
+        # 综合损失
+        total_loss = char_loss + self.lambda_freq * freq_loss
+        return total_loss
+
+    def charbonnier_loss(self, pred, target):
+        """ 鲁棒的L1损失，带epsilon平滑 """
+        diff = pred - target
+        return torch.sqrt(diff ** 2 + self.eps ** 2).mean()
+
+    def frequency_loss(self, pred, target):
+        """ 频域L1损失 (实部+虚部) """
+        # 快速傅里叶变换
+        pred = pred.contiguous().to(torch.float32)
+        target = target.contiguous().to(torch.float32)
+
+        pred_fft = fft.fft2(pred)
+        target_fft = fft.fft2(target)
+
+        # 分离实部虚部
+        pred_real, pred_imag = pred_fft.real, pred_fft.imag
+        target_real, target_imag = target_fft.real, target_fft.imag
+
+        # 计算L1损失
+
+        loss_real = F.l1_loss(pred_real, target_real)
+        loss_imag = F.l1_loss(pred_imag, target_imag)
+
+        return (loss_real + loss_imag) / 2  # 平均实虚损失
+
+
+class comLoss(nn.Module):
+    def __init__(self, E_weight, P_weight):
+        super(CIDLoss, self).__init__()
+        self.P_weight = P_weight
+        self.RBSFormerLoss= RBSFormerLoss.cuda()
+        self.E_loss = EdgeLoss(loss_weight=E_weight).cuda()
+        self.P_loss = PerceptualLoss({'conv1_2': 1, 'conv2_2': 1,'conv3_4': 1,'conv4_4': 1}, perceptual_weight = 1.0 ,criterion='mse').cuda()
+
+    def forward(self, pred, target):
+        loss = self.RBSFormerLoss(pred, target) + self.E_loss(pred, target) + self.P_weight * self.P_loss(pred, target)[0]
         return loss
